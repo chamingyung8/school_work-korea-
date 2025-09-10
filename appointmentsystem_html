@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+        background-color: #FFFFFF; /* 전체 배경 흰색 */
+        color: #333333;
+        font-family: 'Malgun Gothic', sans-serif;
+        font-weight: bold;
+        margin: 0;
+        padding: 15px;
+      }
+      .container {
+        max-width: 800px;
+        margin: auto;
+        padding: 25px;
+        background-color: #FFFFFF; /* 컨테이너 배경도 흰색으로 변경 */
+        border-radius: 10px;
+      }
+      h1, h2 {
+        text-align: center;
+        color: #001f3f;
+      }
+      /* 인삿말 박스 스타일 */
+      .intro-box {
+        background-color: #d8cfb9; /* 박스 배경색 */
+        border: 2px dashed #a09d93; /* 세련된 점선 테두리 */
+        border-radius: 8px;      /* 둥근 모서리 */
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+      .intro-box p {
+        line-height: 1.7;
+        text-align: justify;
+        margin: 0; /* 단락의 기본 마진 제거 */
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 25px 0;
+        font-size: 0.9em;
+      }
+      th, td {
+        border: 1px solid #333333;
+        padding: 10px;
+        text-align: center;
+        min-width: 60px; /* 셀 최소 너비 지정 */
+      }
+      /* 첫 번째 행의 모든 셀과 각 행의 첫 번째 셀에 배경색 적용 */
+      table tr:first-child th,
+      table td:first-child { /* td:first-child로 모든 행의 첫 번째 열에 적용 */
+        background-color: #e0e0e0;
+      }
+      form {
+        margin-top: 20px;
+      }
+      .form-group {
+        margin-bottom: 18px;
+      }
+      label {
+        display: block;
+        margin-bottom: 6px;
+      }
+      input[type="text"], select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+      }
+      textarea {
+        resize: vertical;
+        height: 80px;
+      }
+      .checkbox-group label {
+        display: inline-block;
+        margin-right: 20px;
+        font-weight: normal;
+      }
+      .checkbox-group input {
+        margin-right: 5px;
+      }
+      button {
+        background-color: #001f3f;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+        font-size: 1.1em;
+        transition: background-color 0.3s, color 0.3s;
+      }
+      button:hover {
+        background-color: #d8cfb9;
+        color: #001f3f;
+      }
+      #status {
+        margin-top: 15px;
+        text-align: center;
+        font-size: 1.2em;
+        color: #001f3f;
+        height: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>김해제일고 3학년 9반 학부모 상담 신청</h1>
+
+      <!-- 인삿말 박스 -->
+      <div class="intro-box">
+        <p>학부모님, 안녕하십니까. 김해제일고 3학년 9반 담임 차민경입니다. 학기초 학생상담주간을 맞이하여 자녀의 학교 생활과 진로 설계를 위한 학부모 상담을 실시하고자 합니다. 가능하신 날짜, 시간을 입력해주시면 감사하겠습니다.</p>
+      </div>
+
+      <? var data = getSheetData(); ?>
+      <table>
+        <? for (var i = 0; i < data.table.length; i++) { ?>
+          <tr>
+            <? for (var j = 0; j < data.table[i].length; j++) { ?>
+              <? if (i === 0 || j === 0) { /* 1행 전체 또는 1열 전체는 th로 처리 (제목/구분) */ ?>
+                <th><?= data.table[i][j] ?></th>
+              <? } else { ?>
+                <td><?= data.table[i][j] ?></td>
+              <? } ?>
+            <? } ?>
+          </tr>
+        <? } ?>
+      </table>
+
+      <h2>상담 신청</h2>
+
+      <form id="consultationForm">
+        <div class="form-group">
+          <label for="studentName">학생 이름을 적어주세요 :</label>
+          <input type="text" id="studentName" name="studentName" required>
+        </div>
+
+        <div class="form-group">
+          <label for="consultationDate">상담 희망 날짜를 택해주세요 :</label>
+          <select id="consultationDate" name="consultationDate" required>
+            <option value="" disabled selected>날짜를 선택하세요</option>
+            <? for (var k = 0; k < data.dropdownDates.length; k++) { ?>
+              <option value="<?= data.dropdownDates[k] ?>"><?= data.dropdownDates[k] ?></option>
+            <? } ?>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="consultationTime">상담 희망 시간을 택해주세요 :</label>
+          <select id="consultationTime" name="consultationTime" required>
+            <option value="" disabled selected>시간을 선택하세요</option>
+            <!-- 2번 지시사항에 따라 시간 value와 text를 변경 -->
+            <option value="19:00~20:00">19:00~20:00</option>
+            <option value="20:00~21:00">20:00~21:00</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>상담에 참석하시는 분을 택해주세요 :</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" name="attendee" value="부"> 부</label>
+            <label><input type="checkbox" name="attendee" value="모"> 모</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="concern">주된 관심사를 적어주세요 :</label>
+          <textarea id="concern" name="concern" maxlength="30" placeholder="30자 이내 부탁드립니다"></textarea>
+        </div>
+
+        <button type="submit">전송</button>
+      </form>
+      <div id="status"></div>
+    </div>
+
+    <script>
+      document.getElementById('consultationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const statusDiv = document.getElementById('status');
+        const formButton = this.querySelector('button');
+
+        statusDiv.innerText = '전송 중...';
+        statusDiv.style.color = '#001f3f'; // 메시지 색상 초기화
+        formButton.disabled = true;
+
+        var attendees = [];
+        var checkboxes = document.querySelectorAll('input[name="attendee"]:checked');
+        checkboxes.forEach(checkbox => attendees.push(checkbox.value));
+
+        if (attendees.length === 0) {
+            alert('상담에 참석하시는 분을 선택해주세요.');
+            statusDiv.innerText = '';
+            formButton.disabled = false;
+            return;
+        }
+
+        const formData = {
+          studentName: document.getElementById('studentName').value, // name 속성 변경
+          consultationDate: document.getElementById('consultationDate').value, // name 속성 변경
+          consultationTime: document.getElementById('consultationTime').value, // name 속성 변경
+          attendees: attendees.join(', '),
+          concern: document.getElementById('concern').value
+        };
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+            // ★★★ 서버 응답이 객체(성공)인지 문자열(실패)인지 확인 ★★★
+            if (typeof response === 'object' && response.status === "전송완료") {
+              // --- 성공 처리 ---
+              statusDiv.innerText = response.status;
+
+              // ★★★ 성공 시 HTML 표에 마스킹된 이름 업데이트 ★★★
+              // response 객체에서 필요한 정보를 직접 전달
+              updateTable(response.targetDate, response.targetTime, response.maskedName);
+
+              document.getElementById('consultationForm').reset();
+              // 폼 리셋 후 드롭다운 기본값으로 재설정
+              document.getElementById('consultationDate').value = "";
+              document.getElementById('consultationTime').value = "";
+
+              setTimeout(() => { statusDiv.innerText = ''; }, 3000);
+            } else {
+              // --- 실패 처리 ---
+              statusDiv.innerText = response; // response 자체가 오류 메시지 문자열
+              statusDiv.style.color = 'red';
+            }
+            formButton.disabled = false;
+          })
+          .withFailureHandler(function(error) {
+            statusDiv.innerText = '오류가 발생했습니다: ' + error.message;
+            statusDiv.style.color = 'red';
+            formButton.disabled = false;
+          })
+          .processFormData(formData);
+      });
+
+
+      /**
+       * ★★★ 전송 성공 시 HTML 표를 업데이트하는 함수 ★★★
+       * @param {string} dateWithDay - 선택된 날짜 (예: "3.10.(월)")
+       * @param {string} time - 선택된 시간 (예: "19:00~20:00")
+       * @param {string} maskedName - 마스킹된 학생 이름 (예: "홍O동")
+       */
+      function updateTable(dateWithDay, time, maskedName) {
+        const table = document.querySelector('table');
+        let dateHeaderCell = null; // HTML 표의 2, 5, 8행의 날짜 셀
+
+        // 1. 표의 2, 5, 8행에서 선택한 날짜(요일 포함)와 일치하는 셀을 찾습니다.
+        // `getSheetData`의 `tableRows` 구성에 따라 HTML 테이블의 2번째, 5번째, 8번째 행이 날짜 행에 해당 (0-based index)
+        for (let r = 0; r < table.rows.length; r++) {
+          if (r === 1 || r === 4 || r === 7) { // HTML 표의 2, 5, 8행
+            const row = table.rows[r];
+            for (let c = 1; c < row.cells.length; c++) { // 1열(구분) 제외하고 2열부터
+              if (row.cells[c].innerText.trim() === dateWithDay) {
+                dateHeaderCell = row.cells[c];
+                break;
+              }
+            }
+          }
+          if (dateHeaderCell) break;
+        }
+
+        if (!dateHeaderCell) {
+           console.error("HTML 테이블에서 해당 날짜 헤더 셀을 찾을 수 없습니다:", dateWithDay);
+           return;
+        }
+
+        const dateCellRowIndex = dateHeaderCell.parentElement.rowIndex; // 날짜 헤더 셀이 있는 HTML 행 인덱스 (0-based)
+        const dateCellColIndex = dateHeaderCell.cellIndex; // 날짜 헤더 셀의 열 인덱스 (0-based)
+
+        let targetDataRowIndex; // 마스킹된 이름을 넣을 HTML 표의 행 인덱스
+
+        // `getSheetData`의 `tableRows` 구성 및 2번 지시사항에 맞춰 HTML 표의 업데이트 위치를 계산
+        // HTML 표에서 날짜 행 바로 아래가 19:00-20:00 시간대의 학생 이름 행
+        // 날짜 행 두 칸 아래가 20:00-21:00 시간대의 학생 이름 행
+        if (time === "19:00~20:00") {
+          targetDataRowIndex = dateCellRowIndex + 1;
+        } else if (time === "20:00~21:00") {
+          targetDataRowIndex = dateCellRowIndex + 2;
+        } else {
+          console.error("유효하지 않은 상담 시간입니다:", time);
+          return;
+        }
+
+        // 3. 계산된 위치의 셀을 찾아 마스킹된 이름을 넣습니다.
+        if (table.rows.length > targetDataRowIndex) {
+          const targetRow = table.rows[targetDataRowIndex];
+          if (targetRow.cells.length > dateCellColIndex) {
+            const targetCell = targetRow.cells[dateCellColIndex];
+            targetCell.innerText = maskedName;
+          } else {
+            console.error("대상 셀의 열 인덱스가 유효하지 않습니다.");
+          }
+        } else {
+          console.error("대상 행 인덱스가 HTML 테이블 범위 밖입니다.");
+        }
+      }
+    </script>
+  </body>
+</html>
