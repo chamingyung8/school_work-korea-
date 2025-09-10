@@ -1,0 +1,221 @@
+/**
+ * 웹 앱의 메인 페이지를 표시하는 doGet 함수입니다.
+ * @param {Object} e - 이벤트 매개변수 객체.
+ * @return {HtmlOutput} - 렌더링할 HTML 출력 객체.
+ */
+function doGet(e) {
+  // index.html 파일을 템플릿으로 사용하여 HTML을 생성하고 웹 앱의 제목을 설정합니다.
+  return HtmlService.createTemplateFromFile('index')
+      .evaluate()
+      .setTitle('김해제일고 3학년 9반 학부모 상담 신청');
+}
+
+/**
+ * Google Sheet에서 상담 시간표 및 드롭다운 날짜 데이터를 가져옵니다.
+ * @return {Object} - 테이블 데이터와 요일이 포함된 드롭다운 날짜 목록이 포함된 객체.
+ */
+function getSheetData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  // HTML 표의 각 행을 구성할 데이터 배열
+  let tableRows = [];
+
+  // 1번 지시사항 반영: HTML 표 1행 (헤더)
+  // 1열은 비워두고 2열부터 7열까지 월,화,수,목,금,토 채움
+  tableRows.push(['', '월', '화', '수', '목', '금', '토']);
+
+  // 시트에서 날짜 데이터를 가져올 행들 (B2:G2, B13:G13, B24:G24)
+  // `index.html`의 드롭다운 옵션이 "19:00~19:30"과 "19:30~20:00"으로 되어 있어
+  // `processFormData`의 상담시간을 그에 맞춰 수정해야 하지만,
+  // 2번 지시사항을 따르기 위해 이 부분의 로직은 그대로 유지하고,
+  // `processFormData`의 시간 비교 문자열만 일치시켰습니다.
+  const sheetDateRanges = ['B2:G2', 'B13:G13', 'B24:G24'];
+  const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토']; // 요일 매핑
+
+  // 1열 고정 텍스트를 위한 상수 (1번 지시사항 추가 반영)
+  const fixedCol1_Date = "날짜";
+  const fixedCol1_Time1 = "19:00-20:00"; // HTML 드롭다운 value에 맞춤
+  const fixedCol1_Time2 = "20:00-21:00"; // HTML 드롭다운 value에 맞춤
+
+  // HTML 표의 각 블록을 채웁니다. (총 3개의 상담 블록)
+  // 3번 지시사항과 HTML 테이블 구조를 반영하여 재구성
+  // HTML 표 1행은 이미 tableRows[0]으로 처리됨
+  for (let i = 0; i < sheetDateRanges.length; i++) {
+    const dateRange = sheet.getRange(sheetDateRanges[i]); // 예: B2:G2
+    const displayDates = dateRange.getDisplayValues()[0]; // "3.10." 형식
+    const actualDates = dateRange.getValues()[0];         // 실제 Date 객체
+
+    // HTML 표의 2, 5, 8행: 날짜 행 (1열은 "날짜" 텍스트)
+    tableRows.push([fixedCol1_Date, ...displayDates.map((d, idx) => {
+      // 날짜에 요일 정보를 추가
+      if (d && actualDates[idx] instanceof Date) {
+        const dayIdx = actualDates[idx].getDay();
+        return `${d}(${daysOfWeek[dayIdx]})`;
+      }
+      return d;
+    })]);
+
+    const baseRowForData = dateRange.getRow(); // 현재 날짜 범위의 시트 시작 행 (1-based)
+    const startColIndex = dateRange.getColumn(); // 시트 날짜 범위의 시작 열 (1-based)
+
+    // HTML 표의 3, 6, 9행: 19:00-20:00 상담 시간 학생 이름
+    // 시트에서 가져올 실제 행: 날짜 행(baseRowForData)으로부터 2칸 아래 (즉, baseRowForData + 2)
+    const rawStudentNames_19_00 = sheet.getRange(baseRowForData + 2, startColIndex, 1, 6).getValues()[0];
+    const maskedStudentNames_19_00 = rawStudentNames_19_00.map(name => maskName(String(name || ''))); // 마스킹 적용 및 빈 값 처리
+    tableRows.push([fixedCol1_Time1, ...maskedStudentNames_19_00]);
+
+    // HTML 표의 4, 7, 10행: 20:00-21:00 상담 시간 학생 이름
+    // 시트에서 가져올 실제 행: 날짜 행(baseRowForData)으로부터 7칸 아래 (즉, baseRowForData + 7)
+    const rawStudentNames_20_00 = sheet.getRange(baseRowForData + 7, startColIndex, 1, 6).getValues()[0];
+    const maskedStudentNames_20_00 = rawStudentNames_20_00.map(name => maskName(String(name || ''))); // 마스킹 적용 및 빈 값 처리
+    tableRows.push([fixedCol1_Time2, ...maskedStudentNames_20_00]);
+  }
+
+
+  // 드롭다운에 표시할 날짜 데이터 범위 (2번 지시사항의 날짜 셀 찾기 기준에 맞춤)
+  const dropdownDateRanges = ['B2:G2', 'B13:G13', 'B24:G24']; // 드롭다운 날짜는 시트의 B2, B13, B24 행에서 가져옴 (실제 날짜가 있는 행)
+
+  const datesForDropdown = dropdownDateRanges.flatMap(rangeName => {
+    const range = sheet.getRange(rangeName);
+    const values = range.getValues()[0]; // 실제 날짜 객체 또는 숫자
+    const displayValues = range.getDisplayValues()[0]; // 화면에 표시되는 문자열 (예: "3.10.")
+
+    return values.map((dateValue, idx) => {
+      const displayValue = displayValues[idx];
+      if (displayValue && String(displayValue).trim() !== '') { // String()으로 명시적 변환
+        if (dateValue instanceof Date) { // 실제 날짜 객체인 경우 요일 추가
+          const dayOfWeek = daysOfWeek[dateValue.getDay()];
+          return `${displayValue}(${dayOfWeek})`;
+        }
+        return displayValue; // 문자열인 경우 그대로 반환
+      }
+      return null;
+    }).filter(dateString => dateString !== null);
+  });
+
+  return {
+    table: tableRows,
+    dropdownDates: [...new Set(datesForDropdown)] // 중복 제거
+  };
+}
+
+
+/**
+ * 학생 이름을 마스킹 처리합니다. (예: 홍길동 -> 홍O동)
+ * @param {String} name - 학생의 전체 이름.
+ * @return {String} - 마스킹 처리된 이름.
+ */
+function maskName(name) {
+  if (!name || String(name).trim() === '') return ''; // 빈 문자열 또는 null/undefined 처리
+  const strName = String(name); // 이름이 숫자로 들어오는 경우 대비
+
+  if (strName.length > 2) {
+    return strName.substring(0, 1) + 'O' + strName.substring(strName.length - 1);
+  } else if (strName.length === 2) {
+    return strName.substring(0, 1) + 'O';
+  }
+  return strName;
+}
+
+/**
+ * 클라이언트(브라우저)에서 제출된 양식 데이터를 처리하고 시트에 기록합니다.
+ * @param {Object} formData - 웹 앱 양식에서 제출된 데이터 객체.
+ * @return {Object|String} - 성공 시 {status, maskedName} 객체, 실패 시 오류 메시지 문자열.
+ */
+function processFormData(formData) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  const studentName = formData.studentName; // 변경: form 필드 name이 studentName
+  const targetDateWithDay = formData.consultationDate; // 변경: form 필드 name이 consultationDate
+  const targetDate = targetDateWithDay.split('(')[0]; // "3.10.(월)" 에서 "3.10." 추출
+  const targetTime = formData.consultationTime; // 변경: form 필드 name이 consultationTime
+  const attendees = formData.attendees;
+  const concern = formData.concern; // 새로운 필드: 관심사
+
+  let targetCol = -1;
+  let dateFoundInRow = -1; // 시트의 0-based index (실제 시트의 행 번호 - 1)
+
+  // 2번 지시사항 반영: B2:G2, B13:G13, B24:G24 영역에서 날짜 셀 찾기
+  // 실제 시트 행 번호: 2, 13, 24 -> 0-based index: 1, 12, 23
+  const dateRowIndexesToCheck = [1, 12, 23];
+  const allDisplayData = sheet.getDataRange().getDisplayValues(); // 모든 데이터 한 번에 가져오기
+
+  for (const rowIndex of dateRowIndexesToCheck) {
+    if (rowIndex < allDisplayData.length) {
+      const rowData = allDisplayData[rowIndex];
+      for(let c = 0; c < rowData.length; c++) {
+        // 날짜 형식 일치 여부 확인 (예: "3.10.(월)"에서 "3.10."만 비교)
+        if(rowData[c] && String(rowData[c]).split('(')[0] === targetDate) { // String()으로 명시적 변환
+           targetCol = c;
+           dateFoundInRow = rowIndex;
+           break;
+        }
+      }
+    }
+     if (targetCol !== -1) break;
+  }
+
+  if (targetCol === -1) {
+    return "오류: 해당 날짜(" + targetDate + ")를 시트에서 찾을 수 없습니다.";
+  }
+
+  const sheetColIndex = targetCol + 1; // 1-based column index
+
+  let nameCellRow; // 1-based row index (시트에 실제로 기록될 행 번호)
+  let dadCellRow;
+  let momCellRow;
+  let concernCellRow;
+
+  // 2번 지시사항 반영: 상담 시간에 따른 시트 행 위치 계산
+  // dateFoundInRow는 0-based index이므로, 실제 시트 행은 dateFoundInRow + 1
+  const actualDateSheetRow = dateFoundInRow + 1;
+
+  // 19:00-20:00 시간대
+  if (targetTime === "19:00~20:00") {
+    nameCellRow = actualDateSheetRow + 2; // 날짜셀로부터 2칸 아래 (학생 이름)
+    dadCellRow = actualDateSheetRow + 3;  // 날짜셀로부터 3칸 아래 (부 참석)
+    momCellRow = actualDateSheetRow + 4;  // 날짜셀로부터 4칸 아래 (모 참석)
+    concernCellRow = actualDateSheetRow + 5; // 날짜셀로부터 5칸 아래 (관심사)
+  }
+  // 20:00-21:00 시간대
+  else if (targetTime === "20:00~21:00") {
+    nameCellRow = actualDateSheetRow + 7; // 날짜셀로부터 7칸 아래 (학생 이름)
+    dadCellRow = actualDateSheetRow + 8;  // 날짜셀로부터 8칸 아래 (부 참석)
+    momCellRow = actualDateSheetRow + 9;  // 날짜셀로부터 9칸 아래 (모 참석)
+    concernCellRow = actualDateSheetRow + 10; // 날짜셀로부터 10칸 아래 (관심사)
+  }
+  else {
+    return "오류: 유효하지 않은 상담 시간입니다. (현재: " + targetTime + ")";
+  }
+
+  const nameCell = sheet.getRange(nameCellRow, sheetColIndex);
+
+  if (nameCell.getValue() !== "") {
+    return "예약이 이미 찼습니다. 다른 날짜 또는 시간대를 선택하세요";
+  } else {
+    // 시트에는 '전체 이름'을 저장
+    nameCell.setValue(studentName);
+
+    if (attendees.includes('부')) {
+      sheet.getRange(dadCellRow, sheetColIndex).setValue('O'); // 2번 지시사항 반영: O 입력
+    }
+    if (attendees.includes('모')) {
+      sheet.getRange(momCellRow, sheetColIndex).setValue('O'); // 2번 지시사항 반영: O 입력
+    }
+
+    // 2번 지시사항 반영: 관심사 저장
+    sheet.getRange(concernCellRow, sheetColIndex).setValue(concern);
+
+    // 성공 시, 클라이언트(HTML)로 보낼 '마스킹된 이름' 생성
+    const maskedName = maskName(studentName);
+
+    // 성공 응답으로 객체를 반환
+    return {
+      status: "전송완료",
+      maskedName: maskedName,
+      // HTML 업데이트를 위해 필요한 추가 정보
+      targetDate: targetDateWithDay,
+      targetTime: targetTime
+    };
+  }
+}
